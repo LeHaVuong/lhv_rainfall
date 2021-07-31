@@ -4,6 +4,7 @@ pandas
 matplotlib
 seaborn
 scikit-learn
+pystan
 fbprophet
 pandas_profiling
 xgboost

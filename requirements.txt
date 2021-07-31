@@ -4,7 +4,7 @@ pandas
 matplotlib
 seaborn
 scikit-learn
-pystan
+pystan==2.19.1.1
 fbprophet
 pandas_profiling
 xgboost

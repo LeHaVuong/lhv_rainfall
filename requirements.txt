@@ -7,6 +7,5 @@ scikit-learn
 fbprophet
 pandas_profiling
 xgboost
-math
 statsmodels
 pmdarima

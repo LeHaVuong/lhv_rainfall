@@ -1,114 +1,77 @@
-import streamlit as st
 import numpy as np
 import pandas as pd
-
 import matplotlib.pyplot as plt
+from statsmodels.tools.eval_measures import rmse
 import seaborn as sns
-# %matplotlib inline
-from fbprophet import Prophet
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split, cross_val_score
-import pandas_profiling as pp
-
-from sklearn.preprocessing import LabelEncoder
-
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
-from xgboost import XGBRegressor
-from sklearn.metrics import r2_score
-from sklearn.metrics import mean_squared_error, mean_absolute_error
-from math import sqrt
-
-from statsmodels.tsa.seasonal import seasonal_decompose
-from pmdarima import auto_arima
-
-from fbprophet import Prophet 
-from fbprophet.plot import add_changepoints_to_plot
+import statsmodels.api as sm
+import itertools
+from statsmodels.tsa.arima_model import ARIMA, ARMA
+import warnings
+warnings.filterwarnings("ignore")
+from datetime import date, datetime
+import streamlit as st
+from sklearn.metrics import mean_squared_error
+import math
 
 data = pd.read_csv('data_rain.csv',skiprows=10)
 
-data.head()
-
 data['DATE'] = data['YEAR'].astype(str) + '-' + data['MO'].astype(str) + '-' + data['DY'].astype(str)
-data.head()
 
 df = data[['DATE','PRECTOT']]
-df.head()
 
 df = df.drop(df[df.PRECTOT <0].index)
-
-df.tail()
 
 df_ts = pd.DataFrame()
 df_ts['ds'] = pd.to_datetime(df['DATE'])
 df_ts['y'] = df['PRECTOT']
 
-df_ts.head()
+# Data theo ngay
+df_ts1 = df_ts.copy(deep=False)
 
-train = df_ts[df_ts['ds']<'2018-01-01']
-train.head()
+df_ts1.index = pd.to_datetime(df_ts1.ds)
+df_ts1 = df_ts1.drop(['ds'],axis=1)
 
-test = df_ts[df_ts['ds']>='2018-01-01']
-test.head()
+# Data theo thang
+df_ts2 = df_ts1.resample('MS').mean()
 
-test.tail()
 
-# Build Model
-model = Prophet()
-model.fit(df_ts)
-# 2 year in test and 2 year to predict new values
-months = pd.date_range('2018-01-01','2023-07-06',freq='D').strftime("%Y-%m-%d").tolist()    
-future = pd.DataFrame(months)
-future.columns = ['ds']
-future['ds'] = pd.to_datetime(future['ds'])
-forecast = model.predict(future)
-forecast[['ds', 'yhat']].head()
-y_test =test['y'].values
-y_pred = forecast['yhat'].values[:1283]
-mae_p = mean_absolute_error(y_test,y_pred)
-print(mae_p)
-y_test_value = pd.DataFrame(y_test, index = pd.to_datetime(test['ds']),columns=['Actual'])
-y_pred_value = pd.DataFrame(y_pred, index = pd.to_datetime(test['ds']),columns=['Prediction'])
+# Build Model theo ngay
+train_data1, test_data1 = df_ts1[0:int(len(df_ts1)*0.8)], df_ts1[int(len(df_ts1)*0.8):]
+train_ar1 = train_data1['y'].values
+test_ar1 = test_data1['y'].values
 
-y_test_value
+history1 = [x for x in train_ar1]
+predictions1 = list()
+for t in range(len(test_ar1)):
+    model1 = ARIMA(history1, order=(2,1,0)) 
+    model_fit1 = model1.fit(disp=0)
+    output1 = model_fit1.forecast()
+    yhat1 = output1[0]
+    predictions1.append(yhat1)
+    obs1 = test_ar1[t]
+    history1.append(obs1)
+    # print('predicted=%f, expected=%f' % (yhat, obs))
+error1 = mean_squared_error(test_ar1, predictions1)
+rmse1 = np.sqrt(np.mean(predictions1-test_ar1)**2) 
 
-# Visulaize the result
-plt.figure(figsize=(12,6))
-plt.plot(y_test_value, label='Rainfall')
-plt.plot(y_pred_value, label='Rainfall prediction')
-plt.xticks(rotation='vertical')
-plt.legend()
-plt.show()
+# Build Model theo thang
+train_data2, test_data2 = df_ts2[0:int(len(df_ts2)*0.8)], df_ts2[int(len(df_ts2)*0.8):]
+train_ar2 = train_data2['y'].values
+test_ar2 = test_data2['y'].values
 
-fig = model.plot(forecast) 
-fig.show()
-a = add_changepoints_to_plot(fig.gca(), model, forecast)
-
-fig1 = model.plot_components(forecast)
-fig1.show()
-
-# Prediction for next 2 years
-m = Prophet() 
-m.fit(df_ts)
-future = m.make_future_dataframe(periods=365, freq='D') # next 365 days
-
-forecast = m.predict(future)
-forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper', 'trend', 'trend_lower', 'trend_upper']].tail()
-
-fig = m.plot(forecast) 
-fig.show()
-a = add_changepoints_to_plot(fig.gca(), m, forecast)
-
-fig1 = model.plot_components(forecast)
-fig1.show()
-
-plt.figure(figsize=(15,8))
-plt.plot(df_ts['y'], label='Rainfall')
-plt.plot(forecast['yhat'], label='Rainfall with next 30 days prediction', color='red')
-plt.xticks(rotation='vertical')
-plt.legend()
-plt.show()
+history2 = [x for x in train_ar2]
+predictions2 = list()
+for t in range(len(test_ar2)):
+    model2 = ARIMA(history2, order=(2,1,0)) 
+    model_fit2 = model2.fit(disp=0)
+    output2 = model_fit2.forecast()
+    yhat2 = output2[0]
+    predictions2.append(yhat2)
+    obs2 = test_ar2[t]
+    history2.append(obs2)
+    # print('predicted=%f, expected=%f' % (yhat, obs))
+error2 = mean_squared_error(test_ar2, predictions2)
+rmse2 = np.sqrt(np.mean(predictions2-test_ar2)**2)
 
 # Part 2: Show project's result with Streamlit
 
@@ -116,8 +79,8 @@ st.title("Data Science")
 st.header('Rainfall Prediction Project')
 st.subheader('Make new Prediction')
 
-menu = ['Overview','Build Project','New Prediction']
-choice = st.sidebar.selectbox('Danh muc',menu)
+menu = ['Overview','Build Project','New Prediction By Day','New Prediction By Month']
+choice = st.sidebar.selectbox('Menu',menu)
 if choice == 'Overview':
     st.subheader('Overview')
     st.write("""
@@ -133,20 +96,113 @@ elif choice == 'Build Project':
     st.write('### Show data:')
     st.table(df_ts.head(5))
 
-    st.write('### Build model and evaluation:')
-    st.write('Mean absolute error: {}'.format (round(mae_p,2)))
+    st.write('### Build model and evaluation with data by date:')
+    st.write('Root mean square error (date): {}'.format (round(rmse1,2)))
+    
+    fig1,ax1 = plt.subplots()
+    # ax1.figure(figsize=(12,7))
+    ax1.plot(df_ts1['y'], 'green', color='blue', label='Training Data')
+    ax1.plot(test_data1.index, predictions1, color='green', marker='o', linestyle='dashed', 
+            label='Predicted')
+    ax1.plot(test_data1.index, test_data1['y'], color='red', label='Actual')
+    ax1.set_title('Rainfall Prediction')
+    ax1.set_xlabel('Dates')
+    ax1.set_ylabel('mm/day')
+    st.pyplot(fig1)
 
-    st.write('#### Visualization')
-    plt.figure(figsize=(12,6))
-    plt.plot(y_test_value, label='Rainfall')
-    plt.plot(y_pred_value, label='Rainfall prediction')
-    plt.xticks(rotation='vertical')
-    plt.legend()
-    plt.show()
+    st.write('### Build model and evaluation with data by month:')
+    st.write('Root mean square error (month): {}'.format (round(rmse2,2)))
+    
+    fig2,ax2 = plt.subplots()
+    # ax2.figure(figsize=(12,7))
+    ax2.plot(df_ts2['y'], 'green', color='blue', label='Training Data')
+    ax2.plot(test_data2.index, predictions2, color='green', marker='o', linestyle='dashed', 
+            label='Predicted')
+    ax2.plot(test_data2.index, test_data2['y'], color='red', label='Actual')
+    ax2.set_title('Rainfall Prediction')
+    ax2.set_xlabel('Dates')
+    ax2.set_ylabel('mm/day')
+    st.pyplot(fig2)
 
-    fig = model.plot(forecast) 
-    fig.show()
-    a = add_changepoints_to_plot(fig.gca(), model, forecast)
 
-    fig1 = model.plot_components(forecast)
-    fig1.show()
+elif choice == 'New Prediction By Day':
+    d1 = st.date_input("When is the date you want to predict?", datetime(2019, 7, 6), min_value=date.today())
+    st.write('The date you want to predict is:', d1)
+    d0_d = df_ts1.index[-1]
+    d0_d = d0_d.date()
+    delta1 = d1 - d0_d
+    delta1 = delta1.days
+    # st.write(delta1)
+
+    history1_d = history1
+    predictions1_d = list()
+    for t in range(delta1):
+        model1_d = ARIMA(history1_d, order=(2,1,0)) 
+        model_fit1_d = model1_d.fit(disp=0)
+        output1_d = model_fit1_d.forecast()
+        yhat1_d = output1_d[0]
+        predictions1_d.append(yhat1_d)
+        obs1_d = test_ar1[t]
+        history1_d.append(obs1_d)
+
+    st.write('The rainfall on', str(d1) ,'is:', round(predictions1_d[-1][0],2),'(mm/day-1)')
+
+elif choice == 'New Prediction By Month':
+    Years = np.arange(int(date.today().year),int(date.today().year)+11)
+    # year = st.selectbox('Year',options=Years)
+    Months = np.arange(1,13)
+    # month = st.selectbox('Month',options=Months)
+    # d2 = datetime(year, month, 1)
+    # st.write('The month you want to predict is:', d2.date())
+    with st.form("my_form"):
+        st.write("Inside the form")
+        # slider_val = st.slider("Form slider")
+        # checkbox_val = st.checkbox("Form checkbox")
+        # Every form must have a submit button.
+        year = st.selectbox('Year',options=Years)
+        month = st.selectbox('Month',options=Months)
+        submitted = st.form_submit_button("Submit")
+        d2 = datetime(year, month, 1)
+        d2 = d2.date()
+        if submitted:
+            st.write('The month you want to predict is:', d2)
+    st.write("Outside the form")
+    d0_m = df_ts2.index[-1]
+    d0_m = d0_m.date()
+    delta2 = d2 - d0_m
+    delta2 = round(delta2.days/30)
+    st.write(delta2)
+
+    data_2020_d = df_ts.loc[(df_ts['ds'] >= '2020-01-01') & (df_ts['ds'] <= '2020-12-01')]
+    data_2020_d.index = pd.to_datetime(data_2020_d.ds)
+    data_2020_d = data_2020_d.drop(['ds'],axis=1)
+    data_2020_m = data_2020_d.resample('MS').mean()
+
+    # history2_m = history2
+    # predictions2_m = predictions2
+    # test_ar2m = test_ar2
+
+    max_month = 12
+    x = year - df_ts2.index[-1].year
+    for t in range(delta2):
+        model2_m = ARIMA(history2, order=(2,1,0)) 
+        model_fit2_m = model2_m.fit(disp=0)
+        output2_m = model_fit2_m.forecast()
+        yhat2_m = output2_m[0]
+        # st.write(yhat2_m)
+        predictions2.append(yhat2_m)
+        # test_ar2m = np.append(test_ar2m, yhat2_m[0])
+        # obs2_m = obs2 = test_ar2m[t+1]
+        index = df_ts2.index[-1].month + t
+        if df_ts2.index[-1].month + t >= max_month:
+            index = (df_ts2.index[-1].month + t) - max_month*math.floor(index/max_month)
+        obs2_m = data_2020_m.values[index][0]
+        history2.append(obs2_m)
+    model2_m = ARIMA(history2, order=(2,1,0)) 
+    model_fit2_m = model2_m.fit(disp=0)
+    output2_m = model_fit2_m.forecast()
+    yhat2_m = output2_m[0]
+    st.write(yhat2_m)
+    predictions2.append(yhat2_m)
+    st.write('The rainfall on', str(d2) ,'is:', round(predictions2[-1][0],2),'(mm/month)')
+    # st.write(predictions2)

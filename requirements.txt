@@ -8,5 +8,4 @@ pandas_profiling
 xgboost
 statsmodels
 pmdarima
-itertools
 warnings

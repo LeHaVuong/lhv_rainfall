@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from statsmodels.tools.eval_measures import rmse
 import seaborn as sns
 import statsmodels.api as sm
-import itertools
+# import itertools
 from statsmodels.tsa.arima_model import ARIMA, ARMA
 import warnings
 warnings.filterwarnings("ignore")

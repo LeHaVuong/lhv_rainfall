@@ -4,9 +4,9 @@ pandas
 matplotlib
 seaborn
 scikit-learn
-pystan==2.19.1.1
-fbprophet
 pandas_profiling
 xgboost
 statsmodels
 pmdarima
+itertools
+warnings

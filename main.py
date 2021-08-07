@@ -178,9 +178,6 @@ elif choice == 'New Prediction By Month':
     data_2020_d = data_2020_d.drop(['ds'],axis=1)
     data_2020_m = data_2020_d.resample('MS').mean()
 
-    # history2_m = history2
-    # predictions2_m = predictions2
-    # test_ar2m = test_ar2
     dict_month = {}
     for i in range(len(data_2020_m)):
         dict_month[data_2020_m.index[i].month] = data_2020_m.values[i][0]
@@ -200,16 +197,8 @@ elif choice == 'New Prediction By Month':
         model_fit2_m = model2_m.fit(disp=0)
         output2_m = model_fit2_m.forecast()
         yhat2_m = output2_m[0]
+
         predictions2.append(yhat2_m)
 
-        st.write(index + 1)
-        st.write(yhat2_m)
         dict_month[index+1] = yhat2_m[0]
-    # model2_m = ARIMA(history2, order=(2,1,0)) 
-    # model_fit2_m = model2_m.fit(disp=0)
-    # output2_m = model_fit2_m.forecast()
-    # yhat2_m = output2_m[0]
-    # # st.write(yhat2_m)
-    # predictions2.append(yhat2_m)
     st.write('The rainfall on', str(d2) ,'is:', round(predictions2[-1][0],2),'(mm/month)')
-    # st.write(predictions2)

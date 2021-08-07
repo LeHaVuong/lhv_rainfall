@@ -132,20 +132,18 @@ elif choice == 'New Prediction By Day':
     d0_d = d0_d.date()
     delta1 = d1 - d0_d
     delta1 = delta1.days
-    # st.write(delta1)
 
-    history1_d = history1
-    predictions1_d = list()
     for t in range(delta1):
-        model1_d = ARIMA(history1_d, order=(2,1,0)) 
+        model1_d = ARIMA(history1, order=(2,1,0)) 
         model_fit1_d = model1_d.fit(disp=0)
         output1_d = model_fit1_d.forecast()
         yhat1_d = output1_d[0]
-        predictions1_d.append(yhat1_d)
-        obs1_d = test_ar1[t]
-        history1_d.append(obs1_d)
+        predictions1.append(yhat1_d)
+        # obs1_d = test_ar1[t]
+        history1.append(yhat1_d[0])
+        st.write(yhat1_d[0])
 
-    st.write('The rainfall on', str(d1) ,'is:', round(predictions1_d[-1][0],2),'(mm/day-1)')
+    st.write('The rainfall on', str(d1) ,'is:', round(predictions1[-1][0],2),'(mm/day-1)')
 
 elif choice == 'New Prediction By Month':
     Years = np.arange(int(date.today().year),int(date.today().year)+11)

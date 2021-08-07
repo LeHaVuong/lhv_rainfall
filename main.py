@@ -170,7 +170,7 @@ elif choice == 'New Prediction By Month':
     d0_m = df_ts2.index[-1]
     d0_m = d0_m.date()
     delta2 = d2 - d0_m
-    delta2 = round(delta2.days/30)
+    delta2 = math.floor(delta2.days/30)
     st.write(delta2)
 
     data_2020_d = df_ts.loc[(df_ts['ds'] >= '2020-01-01') & (df_ts['ds'] <= '2020-12-01')]
@@ -185,24 +185,17 @@ elif choice == 'New Prediction By Month':
     max_month = 12
     x = year - df_ts2.index[-1].year
     for t in range(delta2):
-        model2_m = ARIMA(history2, order=(2,1,0)) 
-        model_fit2_m = model2_m.fit(disp=0)
-        output2_m = model_fit2_m.forecast()
-        yhat2_m = output2_m[0]
-        # st.write(yhat2_m)
-        predictions2.append(yhat2_m)
-        # test_ar2m = np.append(test_ar2m, yhat2_m[0])
-        # obs2_m = obs2 = test_ar2m[t+1]
         index = df_ts2.index[-1].month + t
         if df_ts2.index[-1].month + t >= max_month:
             index = (df_ts2.index[-1].month + t) - max_month*math.floor(index/max_month)
         obs2_m = data_2020_m.values[index][0]
         history2.append(obs2_m)
-    model2_m = ARIMA(history2, order=(2,1,0)) 
-    model_fit2_m = model2_m.fit(disp=0)
-    output2_m = model_fit2_m.forecast()
-    yhat2_m = output2_m[0]
-    st.write(yhat2_m)
-    predictions2.append(yhat2_m)
+
+        model2_m = ARIMA(history2, order=(2,1,0)) 
+        model_fit2_m = model2_m.fit(disp=0)
+        output2_m = model_fit2_m.forecast()
+        yhat2_m = output2_m[0]
+
+        predictions2.append(yhat2_m)
+        st.write(yhat2_m)
     st.write('The rainfall on', str(d2) ,'is:', round(predictions2[-1][0],2),'(mm/month)')
-    # st.write(predictions2)

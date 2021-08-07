@@ -126,8 +126,8 @@ elif choice == 'Build Project':
 
 
 elif choice == 'New Prediction By Day':
-    d1 = st.date_input("When is the date you want to predict?", datetime(2019, 7, 6), min_value=date.today())
-    st.write('The date you want to predict is:', d1)
+    d1 = st.date_input("When is the date you want to predict?",date.today() , min_value=date.today())
+    st.write('The date you want to predict is:', d1) # datetime(2019, 7, 6)
     d0_d = df_ts1.index[-1]
     d0_d = d0_d.date()
     delta1 = d1 - d0_d
@@ -170,7 +170,7 @@ elif choice == 'New Prediction By Month':
     d0_m = df_ts2.index[-1]
     d0_m = d0_m.date()
     delta2 = d2 - d0_m
-    delta2 = round(delta2.days/30)
+    delta2 = math.floor(delta2.days/30)
     st.write(delta2)
 
     data_2020_d = df_ts.loc[(df_ts['ds'] >= '2020-01-01') & (df_ts['ds'] <= '2020-12-01')]
@@ -181,28 +181,35 @@ elif choice == 'New Prediction By Month':
     # history2_m = history2
     # predictions2_m = predictions2
     # test_ar2m = test_ar2
+    dict_month = {}
+    for i in range(len(data_2020_m)):
+        dict_month[data_2020_m.index[i].month] = data_2020_m.values[i][0]
+
 
     max_month = 12
     x = year - df_ts2.index[-1].year
     for t in range(delta2):
+        index = df_ts2.index[-1].month + t
+        if index >= max_month:
+            index = index - max_month*math.floor(index/max_month)
+        
+        obs2_m = dict_month[index+1]
+        history2.append(obs2_m)
+
         model2_m = ARIMA(history2, order=(2,1,0)) 
         model_fit2_m = model2_m.fit(disp=0)
         output2_m = model_fit2_m.forecast()
         yhat2_m = output2_m[0]
-        # st.write(yhat2_m)
         predictions2.append(yhat2_m)
-        # test_ar2m = np.append(test_ar2m, yhat2_m[0])
-        # obs2_m = obs2 = test_ar2m[t+1]
-        index = df_ts2.index[-1].month + t
-        if df_ts2.index[-1].month + t >= max_month:
-            index = (df_ts2.index[-1].month + t) - max_month*math.floor(index/max_month)
-        obs2_m = data_2020_m.values[index][0]
-        history2.append(obs2_m)
-    model2_m = ARIMA(history2, order=(2,1,0)) 
-    model_fit2_m = model2_m.fit(disp=0)
-    output2_m = model_fit2_m.forecast()
-    yhat2_m = output2_m[0]
-    st.write(yhat2_m)
-    predictions2.append(yhat2_m)
+
+        st.write(index + 1)
+        st.write(yhat2_m)
+        dict_month[index+1] = yhat2_m[0]
+    # model2_m = ARIMA(history2, order=(2,1,0)) 
+    # model_fit2_m = model2_m.fit(disp=0)
+    # output2_m = model_fit2_m.forecast()
+    # yhat2_m = output2_m[0]
+    # # st.write(yhat2_m)
+    # predictions2.append(yhat2_m)
     st.write('The rainfall on', str(d2) ,'is:', round(predictions2[-1][0],2),'(mm/month)')
     # st.write(predictions2)

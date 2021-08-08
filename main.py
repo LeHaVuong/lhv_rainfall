@@ -8,7 +8,7 @@ import statsmodels.api as sm
 from statsmodels.tsa.arima_model import ARIMA, ARMA
 import warnings
 warnings.filterwarnings("ignore")
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import streamlit as st
 from sklearn.metrics import mean_squared_error
 import math
@@ -43,7 +43,7 @@ test_ar1 = test_data1['y'].values
 history1 = [x for x in train_ar1]
 predictions1 = list()
 for t in range(len(test_ar1)):
-    model1 = ARIMA(history1, order=(2,1,0)) 
+    model1 = ARIMA(history1, order=(0,1,0)) 
     model_fit1 = model1.fit(disp=0)
     output1 = model_fit1.forecast()
     yhat1 = output1[0]
@@ -62,7 +62,7 @@ test_ar2 = test_data2['y'].values
 history2 = [x for x in train_ar2]
 predictions2 = list()
 for t in range(len(test_ar2)):
-    model2 = ARIMA(history2, order=(2,1,0)) 
+    model2 = ARIMA(history2, order=(0,1,0)) 
     model_fit2 = model2.fit(disp=0)
     output2 = model_fit2.forecast()
     yhat2 = output2[0]
@@ -124,7 +124,6 @@ elif choice == 'Build Project':
     ax2.set_ylabel('mm/day')
     st.pyplot(fig2)
 
-
 elif choice == 'New Prediction By Day':
     d1 = st.date_input("When is the date you want to predict?",date.today() , min_value=date.today())
     st.write('The date you want to predict is:', d1) # datetime(2019, 7, 6)
@@ -133,15 +132,30 @@ elif choice == 'New Prediction By Day':
     delta1 = d1 - d0_d
     delta1 = delta1.days
 
+    data_2020_d = df_ts.loc[(df_ts['ds'] >= '2020-01-01') & (df_ts['ds'] <= '2020-12-31')]
+    data_2020_d.index = pd.to_datetime(data_2020_d.ds)
+    data_2020_d = data_2020_d.drop(['ds'],axis=1)
+
+    dict_day = {}
+    for i in range(len(data_2020_d)):
+        dict_day[str(data_2020_d.index[i].month) + str(data_2020_d.index[i].day)] = data_2020_d.values[i][0]
+
+
     for t in range(delta1):
-        model1_d = ARIMA(history1, order=(2,1,0)) 
+        new_date = d0_d + timedelta(t + 1)
+        key = str(new_date.month) + str(new_date.day)
+        
+        obs2_m = dict_day[key]
+        history1.append(obs2_m)
+
+        model1_d = ARIMA(history1, order=(0,1,0)) 
         model_fit1_d = model1_d.fit(disp=0)
         output1_d = model_fit1_d.forecast()
         yhat1_d = output1_d[0]
+        if(yhat1_d[0] < 0):
+            yhat1_d[0] = 0
         predictions1.append(yhat1_d)
-        # obs1_d = test_ar1[t]
-        history1.append(yhat1_d[0])
-        st.write(yhat1_d[0])
+        dict_day[key] = yhat1_d[0]
 
     st.write('The rainfall on', str(d1) ,'is:', round(predictions1[-1][0],2),'(mm/day-1)')
 
@@ -191,11 +205,13 @@ elif choice == 'New Prediction By Month':
         obs2_m = dict_month[index+1]
         history2.append(obs2_m)
 
-        model2_m = ARIMA(history2, order=(2,1,0)) 
+        model2_m = ARIMA(history2, order=(0,1,0)) 
         model_fit2_m = model2_m.fit(disp=0)
         output2_m = model_fit2_m.forecast()
         yhat2_m = output2_m[0]
 
+        if(yhat2_m[0] < 0):
+            yhat2_m[0] = 0
         predictions2.append(yhat2_m)
 
         dict_month[index+1] = yhat2_m[0]

@@ -10,7 +10,7 @@ import warnings
 warnings.filterwarnings("ignore")
 from datetime import date, datetime, timedelta
 import streamlit as st
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 import math
 
 data = pd.read_csv('data_rain.csv',skiprows=10)
@@ -43,16 +43,16 @@ test_ar1 = test_data1['y'].values
 history1 = [x for x in train_ar1]
 predictions1 = list()
 for t in range(len(test_ar1)):
+    obs1 = test_ar1[t]
+    history1.append(obs1)
     model1 = ARIMA(history1, order=(0,1,0)) 
     model_fit1 = model1.fit(disp=0)
     output1 = model_fit1.forecast()
     yhat1 = output1[0]
     predictions1.append(yhat1)
-    obs1 = test_ar1[t]
-    history1.append(obs1)
-    # print('predicted=%f, expected=%f' % (yhat, obs))
-error1 = mean_squared_error(test_ar1, predictions1)
-rmse1 = np.sqrt(np.mean(predictions1-test_ar1)**2) 
+mse1 = mean_squared_error(test_ar1, predictions1)
+mae1=mean_absolute_error(test_ar1, predictions1)
+rmse1 = np.sqrt(mse1) 
 
 # Build Model theo thang
 train_data2, test_data2 = df_ts2[0:int(len(df_ts2)*0.8)], df_ts2[int(len(df_ts2)*0.8):]
@@ -62,16 +62,17 @@ test_ar2 = test_data2['y'].values
 history2 = [x for x in train_ar2]
 predictions2 = list()
 for t in range(len(test_ar2)):
+    obs2 = test_ar2[t]
+    history2.append(obs2)
     model2 = ARIMA(history2, order=(0,1,0)) 
     model_fit2 = model2.fit(disp=0)
     output2 = model_fit2.forecast()
     yhat2 = output2[0]
     predictions2.append(yhat2)
-    obs2 = test_ar2[t]
-    history2.append(obs2)
     # print('predicted=%f, expected=%f' % (yhat, obs))
-error2 = mean_squared_error(test_ar2, predictions2)
-rmse2 = np.sqrt(np.mean(predictions2-test_ar2)**2)
+mse2 = mean_squared_error(test_ar2, predictions2)
+mae2 = mean_absolute_error(test_ar2, predictions2)
+rmse2 = np.sqrt(mse2) 
 
 # Part 2: Show project's result with Streamlit
 
@@ -97,7 +98,6 @@ elif choice == 'Build Project':
     st.table(df_ts.head(5))
 
     st.write('### Build model and evaluation with data by date:')
-    st.write('Root mean square error (date): {}'.format (round(rmse1,2)))
     
     fig1,ax1 = plt.subplots()
     # ax1.figure(figsize=(12,7))
@@ -109,9 +109,12 @@ elif choice == 'Build Project':
     ax1.set_xlabel('Dates')
     ax1.set_ylabel('mm/day')
     st.pyplot(fig1)
+    
+    st.write('Mean square error (date): {}'.format (round(mse1,4)))
+    st.write('Root mean square error (date): {}'.format (round(rmse1,4)))
+    st.write('Mean absolute error (date): {}'.format (round(mae1,4)))
 
     st.write('### Build model and evaluation with data by month:')
-    st.write('Root mean square error (month): {}'.format (round(rmse2,2)))
     
     fig2,ax2 = plt.subplots()
     # ax2.figure(figsize=(12,7))
@@ -123,6 +126,10 @@ elif choice == 'Build Project':
     ax2.set_xlabel('Dates')
     ax2.set_ylabel('mm/day')
     st.pyplot(fig2)
+    
+    st.write('Mean square error (month): {}'.format (round(mse2,4)))
+    st.write('Root mean square error (month): {}'.format (round(rmse2,4)))
+    st.write('Mean absolute error (month): {}'.format (round(mae2,4)))
 
 elif choice == 'New Prediction By Day':
     d1 = st.date_input("When is the date you want to predict?",date.today() , min_value=date.today())
@@ -132,13 +139,13 @@ elif choice == 'New Prediction By Day':
     delta1 = d1 - d0_d
     delta1 = delta1.days
 
-    data_2020_d = df_ts.loc[(df_ts['ds'] >= '2020-01-01') & (df_ts['ds'] <= '2020-12-31')]
-    data_2020_d.index = pd.to_datetime(data_2020_d.ds)
-    data_2020_d = data_2020_d.drop(['ds'],axis=1)
+    data_last_year_d = df_ts.loc[(df_ts['ds'] >= '2020-01-01') & (df_ts['ds'] <= '2020-12-31')]
+    data_last_year_d.index = pd.to_datetime(data_last_year_d.ds)
+    data_last_year_d = data_last_year_d.drop(['ds'],axis=1)
 
     dict_day = {}
-    for i in range(len(data_2020_d)):
-        dict_day[str(data_2020_d.index[i].month) + str(data_2020_d.index[i].day)] = data_2020_d.values[i][0]
+    for i in range(len(data_last_year_d)):
+        dict_day[str(data_last_year_d.index[i].month) + str(data_last_year_d.index[i].day)] = data_last_year_d.values[i][0]
 
 
     for t in range(delta1):
@@ -161,58 +168,64 @@ elif choice == 'New Prediction By Day':
 
 elif choice == 'New Prediction By Month':
     Years = np.arange(int(date.today().year),int(date.today().year)+11)
-    # year = st.selectbox('Year',options=Years)
     Months = np.arange(1,13)
-    # month = st.selectbox('Month',options=Months)
-    # d2 = datetime(year, month, 1)
-    # st.write('The month you want to predict is:', d2.date())
+    flag = -1
     with st.form("my_form"):
-        st.write("Inside the form")
-        # slider_val = st.slider("Form slider")
-        # checkbox_val = st.checkbox("Form checkbox")
-        # Every form must have a submit button.
+        st.write("Enter information")
         year = st.selectbox('Year',options=Years)
         month = st.selectbox('Month',options=Months)
+
+        # if (year == date.today().year):
+        #     month = st.selectbox('Month',options=np.arange(int(date.today().month),13))
+        # else:
+        #     month = st.selectbox('Month',options=Months)
+
         submitted = st.form_submit_button("Submit")
         d2 = datetime(year, month, 1)
         d2 = d2.date()
         if submitted:
             st.write('The month you want to predict is:', d2)
-    st.write("Outside the form")
-    d0_m = df_ts2.index[-1]
-    d0_m = d0_m.date()
-    delta2 = d2 - d0_m
-    delta2 = math.floor(delta2.days/30)
-    st.write(delta2)
+    if (d2.year <= date.today().year) & (d2.month <= date.today().month):
+        st.write('Please select future prediction time')
+        flag = 0
+    else:
+        flag = 1
+    if flag == 1:
+        st.write("Result")
+        d0_m = df_ts2.index[-1]
+        d0_m = d0_m.date()
+        delta2 = d2 - d0_m
+        delta2 = math.floor(delta2.days/30)
+        # st.write(delta2)
 
-    data_2020_d = df_ts.loc[(df_ts['ds'] >= '2020-01-01') & (df_ts['ds'] <= '2020-12-01')]
-    data_2020_d.index = pd.to_datetime(data_2020_d.ds)
-    data_2020_d = data_2020_d.drop(['ds'],axis=1)
-    data_2020_m = data_2020_d.resample('MS').mean()
+        data_last_year_d = df_ts.loc[(df_ts['ds'] >= '2020-01-01') & (df_ts['ds'] <= '2020-12-01')]
+        data_last_year_d.index = pd.to_datetime(data_last_year_d.ds)
+        data_last_year_d = data_last_year_d.drop(['ds'],axis=1)
+        data_last_year_m = data_last_year_d.resample('MS').mean()
 
-    dict_month = {}
-    for i in range(len(data_2020_m)):
-        dict_month[data_2020_m.index[i].month] = data_2020_m.values[i][0]
+        dict_month = {}
+        for i in range(len(data_last_year_m)):
+            dict_month[data_last_year_m.index[i].month] = data_last_year_m.values[i][0]
 
 
-    max_month = 12
-    x = year - df_ts2.index[-1].year
-    for t in range(delta2):
-        index = df_ts2.index[-1].month + t
-        if index >= max_month:
-            index = index - max_month*math.floor(index/max_month)
-        
-        obs2_m = dict_month[index+1]
-        history2.append(obs2_m)
+        max_month = 12
+        x = year - df_ts2.index[-1].year
+        for t in range(delta2):
+            index = df_ts2.index[-1].month + t
+            if index >= max_month:
+                index = index - max_month*math.floor(index/max_month)
+            
+            obs2_m = dict_month[index+1]
+            history2.append(obs2_m)
 
-        model2_m = ARIMA(history2, order=(0,1,0)) 
-        model_fit2_m = model2_m.fit(disp=0)
-        output2_m = model_fit2_m.forecast()
-        yhat2_m = output2_m[0]
+            model2_m = ARIMA(history2, order=(0,1,0)) 
+            model_fit2_m = model2_m.fit(disp=0)
+            output2_m = model_fit2_m.forecast()
+            yhat2_m = output2_m[0]
 
-        if(yhat2_m[0] < 0):
-            yhat2_m[0] = 0
-        predictions2.append(yhat2_m)
+            if(yhat2_m[0] < 0):
+                yhat2_m[0] = 0
+            predictions2.append(yhat2_m)
 
-        dict_month[index+1] = yhat2_m[0]
-    st.write('The rainfall on', str(d2) ,'is:', round(predictions2[-1][0],2),'(mm/month)')
+            dict_month[index+1] = yhat2_m[0]
+        st.write('The rainfall on', str(d2) ,'is:', round(predictions2[-1][0],2),'(mm/month)')

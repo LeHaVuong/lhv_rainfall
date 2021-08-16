@@ -185,7 +185,7 @@ elif choice == 'New Prediction By Month':
         d2 = d2.date()
         if submitted:
             st.write('The month you want to predict is:', d2)
-    if (d2.year <= date.today().year) & (d2.month <= date.today().month):
+    if (d2.year <= date.today().year) & (d2.month < date.today().month):
         st.write('Please select future prediction time')
         flag = 0
     else:

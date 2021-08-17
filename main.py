@@ -108,6 +108,7 @@ elif choice == 'Build Project':
     ax1.set_title('Rainfall Prediction')
     ax1.set_xlabel('Dates')
     ax1.set_ylabel('mm/day')
+    ax1.legend()
     st.pyplot(fig1)
     
     st.write('Mean square error (date): {}'.format (round(mse1,4)))
@@ -125,6 +126,7 @@ elif choice == 'Build Project':
     ax2.set_title('Rainfall Prediction')
     ax2.set_xlabel('Dates')
     ax2.set_ylabel('mm/day')
+    ax2.legend()
     st.pyplot(fig2)
     
     st.write('Mean square error (month): {}'.format (round(mse2,4)))
